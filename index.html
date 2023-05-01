@@ -4,108 +4,7 @@
     <main id="nat-info">
       You are behind a <span id="nat-type">???</span> NAT. ICE gathering time is: <span id="ice-gathering-time">???</span>s.
     </main>
-
-
-
     <script type="module">
-      // class NetworkUtils {
-      //   static #iceServers = [
-      //     { urls: 'stun:stun1.l.google.com:19302' },
-      //     { urls: 'stun:stun2.l.google.com:19302' }
-      //   ];
-      //   #config;
-      //   constructor() {
-      //     this.#config = {
-      //       iceServers: this.constructor.#iceServers
-      //     };
-      //   }
-      //   getNATType() {
-      //     return new Promise((resolve) => {
-      //       const relatedPorts = new Map();
-      //       const connection = new RTCPeerConnection(this.#config);
-      //       connection.createDataChannel('bananas');
-      //       connection.onicecandidate = (event) => {
-      //         const { candidate, target: connection } = event;
-      //         if (candidate && candidate.type === 'srflx') {
-      //           const { relatedPort } = candidate;
-      //           if (!relatedPorts.has(relatedPort)) {
-      //             relatedPorts.set(relatedPort, []);
-      //           }
-      //           relatedPorts.get(relatedPort).push(candidate);
-      //         }
-      //         if (connection.iceGatheringState === 'complete') {
-      //           const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([relatedPort, candidates]) => {
-      //             return candidates.length === 1;
-      //           });
-      //           resolve(isSymmetricNAT ? 'symmetric' : 'non-symmetric');
-      //         }
-      //       }
-      //       connection.createOffer().then((offer) =>  {
-      //         connection.setLocalDescription(offer);
-      //       });
-      //     });
-      //   }
-      //   getICEGatheringTime() {
-      //     return new Promise((resolve) => {
-      //       const connection = new RTCPeerConnection(this.#config);
-      //       connection.createDataChannel('bananas');
-      //       connection.onicecandidate = (event) => {
-      //         const { target: connection } = event;
-      //         if (connection.iceGatheringState === 'complete') {
-      //           performance.mark('end');
-      //           const { duration } = performance.measure('iceGatheringTime', 'start', 'end');
-      //           const durationInSeconds = duration / 1000;
-      //           resolve(durationInSeconds);
-      //         }
-      //       }
-      //       performance.mark('start');
-      //       connection.createOffer().then((offer) => {
-      //         connection.setLocalDescription(offer);
-      //       });
-      //     });
-      //   }
-      // }
-
-      // const networkUtils = new NetworkUtils();
-
-
-      // const getNATType = () => {
-      //   return new Promise((resolve) => {
-      //     const relatedPorts = new Map();
-      //     const connection = new RTCPeerConnection({
-      //       iceServers: [
-      //         { urls: 'stun:stun1.l.google.com:19302' },
-      //         { urls: 'stun:stun2.l.google.com:19302' }
-      //       ]
-      //     });
-      //     connection.createDataChannel('bananas');
-      //     connection.onicecandidate = (event) => {
-      //       const { candidate, target: connection } = event;
-      //       if (candidate && candidate.type === 'srflx') {
-      //         const { relatedPort } = candidate;
-      //         if (!relatedPorts.has(relatedPort)) {
-      //           relatedPorts.set(relatedPort, []);
-      //         }
-      //         relatedPorts.get(relatedPort).push(candidate);
-      //       }
-
-      //       if (connection.iceGatheringState === 'complete') {
-      //         const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([relatedPort, candidates]) => {
-      //           return candidates.length === 1;
-      //         });
-
-      //         resolve(isSymmetricNAT ? 'symmetric' : 'non-symmetric');
-      //       }
-      //     }
-      //     connection.createOffer().then((offer) =>  {
-      //       connection.setLocalDescription(offer);
-      //     });
-      //   });
-      // };
-
-
-
-
       class NetworkUtils {
         static #iceServers = [
           { urls: 'stun:stun1.l.google.com:19302' },
@@ -115,16 +14,10 @@
         #iceGatheringComplete;
         #iceGatheringTime;
         #iceGatheringStateResolve;
+        #isInitialising;
         #natType;
         constructor() {
-          this.#connection = new RTCPeerConnection({
-            iceServers: this.constructor.#iceServers
-          });
-          this.#connection.createDataChannel('bananas');
-          this.#iceGatheringComplete = new Promise((resolve) => {
-            this.#iceGatheringStateResolve = resolve;
-          });
-          this.#createConnection();
+          this.init();
         }
         #createConnection() {
           const relatedPorts = new Map();
@@ -143,9 +36,10 @@
                 return candidates.length === 1;
               });
               const { duration } = performance.measure('iceGatheringTime', 'start', 'end');
-              this.#natType = isSymmetricNAT ? 'symmetric' : 'normal';
+              this.#natType = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
               this.#iceGatheringTime = parseFloat(new Number(duration / 1000).toFixed(2));
               this.#iceGatheringStateResolve();
+              this.#isInitialising = false;
             }
           }
           performance.mark('start');
@@ -161,15 +55,25 @@
           await this.#iceGatheringComplete;
           return this.#iceGatheringTime;
         }
+        init() {
+          if (this.#isInitialising) {
+            return;
+          }
+          this.#isInitialising = true;
+          this.#connection = new RTCPeerConnection({
+            iceServers: this.constructor.#iceServers
+          });
+          this.#connection.createDataChannel('bananas');
+          this.#iceGatheringComplete = new Promise((resolve) => {
+            this.#iceGatheringStateResolve = resolve;
+          });
+          this.#createConnection();
+        }
       }
 
       const networkUtils = new NetworkUtils();
 
       window.networkUtils = networkUtils;
-
-
-
-
 
       const natType = await networkUtils.getNATType();
       const iceGatheringTime = await networkUtils.getICEGatheringTime();
