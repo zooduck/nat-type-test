@@ -120,7 +120,7 @@
           this.#connection = new RTCPeerConnection({
             iceServers: this.constructor.#iceServers
           });
-          this.#connection.createDataChannel();
+          this.#connection.createDataChannel('bananas');
           this.#iceGatheringComplete = new Promise((resolve) => {
             this.#iceGatheringStateResolve = resolve;
           });
