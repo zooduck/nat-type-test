@@ -128,7 +128,7 @@
         }
         #createConnection() {
           const relatedPorts = new Map();
-          connection.onicecandidate = (event) => {
+          this.#connection.onicecandidate = (event) => {
             const { candidate, target: connection } = event;
             if (candidate && candidate.type === 'srflx') {
               const { relatedPort } = candidate;
@@ -149,8 +149,8 @@
             }
           }
           performance.mark('start');
-          connection.createOffer().then((offer) =>  {
-            connection.setLocalDescription(offer);
+          this.#connection.createOffer().then((offer) =>  {
+            this.#connection.setLocalDescription(offer);
           });
         }
         async getNATType() {
