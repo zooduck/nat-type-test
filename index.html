@@ -144,7 +144,7 @@
               });
               const { duration } = performance.measure('iceGatheringTime', 'start', 'end');
               this.#natType = isSymmetricNAT ? 'symmetric' : 'normal';
-              this.#iceGatheringTime = duration / 1000;
+              this.#iceGatheringTime = parseFloat(new Number(duration / 1000).toFixed(2));
               this.#iceGatheringStateResolve();
             }
           }
@@ -164,6 +164,8 @@
       }
 
       const networkUtils = new NetworkUtils();
+
+      window.networkUtils = networkUtils;
 
 
 
