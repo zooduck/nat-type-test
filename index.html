@@ -5,77 +5,6 @@
       You are behind a <span id="nat-type">???</span> NAT. ICE gathering time is: <span id="ice-gathering-time">???</span>s.
     </main>
     <script type="module">
-      // class NetworkUtils {
-      //   static #iceServers = [
-      //     { urls: 'stun:stun1.l.google.com:19302' },
-      //     { urls: 'stun:stun2.l.google.com:19302' }
-      //   ];
-      //   #connection;
-      //   #iceGatheringComplete;
-      //   #iceGatheringTime;
-      //   #iceGatheringStateResolve;
-      //   #isInitialising;
-      //   #natType;
-      //   constructor() {
-      //     this.init();
-      //   }
-      //   #createConnection() {
-      //     const relatedPorts = new Map();
-      //     this.#connection.onicecandidate = (event) => {
-      //       const { candidate, target: connection } = event;
-      //       if (candidate && candidate.type === 'srflx') {
-      //         const { relatedPort } = candidate;
-      //         if (!relatedPorts.has(relatedPort)) {
-      //           relatedPorts.set(relatedPort, []);
-      //         }
-      //         relatedPorts.get(relatedPort).push(candidate);
-      //       }
-      //       if (connection.iceGatheringState === 'complete') {
-      //         performance.mark('end');
-      //         const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([relatedPort, candidates]) => {
-      //           return candidates.length === 1;
-      //         });
-      //         const { duration } = performance.measure('iceGatheringTime', 'start', 'end');
-      //         this.#natType = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
-      //         this.#iceGatheringTime = parseFloat(new Number(duration / 1000).toFixed(2));
-      //         this.#iceGatheringStateResolve();
-      //         this.#isInitialising = false;
-      //       }
-      //     }
-      //     performance.mark('start');
-      //     this.#connection.createOffer().then((offer) =>  {
-      //       this.#connection.setLocalDescription(offer);
-      //     });
-      //   }
-      //   async getNATType() {
-      //     await this.#iceGatheringComplete;
-      //     return this.#natType;
-      //   }
-      //   async getICEGatheringTime() {
-      //     await this.#iceGatheringComplete;
-      //     return this.#iceGatheringTime;
-      //   }
-      //   init() {
-      //     if (this.#isInitialising) {
-      //       return;
-      //     }
-      //     this.#isInitialising = true;
-      //     this.#connection = new RTCPeerConnection({
-      //       iceServers: this.constructor.#iceServers
-      //     });
-      //     this.#connection.createDataChannel('bananas');
-      //     this.#iceGatheringComplete = new Promise((resolve) => {
-      //       this.#iceGatheringStateResolve = resolve;
-      //     });
-      //     this.#createConnection();
-      //   }
-      // }
-
-      // const networkUtils = new NetworkUtils();
-
-
-
-
       class NetworkUtils {
         static #iceServersForNATTypeTest = [
           { urls: 'stun:stun1.l.google.com:19302' },
@@ -89,11 +18,74 @@
         constructor() {
           this.init();
         }
+        /**
+         * @method
+         * @returns {Promise<'non-symmetric'|'symmetric'>}
+         */
+        async getNATType() {
+          await this.#iceGatheringComplete;
+          return this.#natType;
+        }
+        /**
+         * @method
+         * @param {{urls: string}[]} iceServers
+         * @returns {Promise<number>}
+         */
+        async getICEGatheringTime(iceServers) {
+          if (!iceServers?.[0]?.urls) {
+            throw new Error('You must specify at least one ICE server.');
+          }
+          return new Promise((resolve) => {
+            const connection = new RTCPeerConnection({ iceServers: iceServers });
+            connection.createDataChannel('bananas');
+            connection.onicecandidate = (event) => {
+              const { target: connection } = event;
+              if (connection.iceGatheringState === 'complete') {
+                performance.mark('end');
+                const { duration } = performance.measure('iceGatheringTime', 'start', 'end');
+                const iceGatheringTime = parseFloat(new Number(duration / 1000).toFixed(2));
+                resolve(iceGatheringTime);
+              }
+            }
+            performance.mark('start');
+            connection.createOffer().then((offer) =>  {
+              connection.setLocalDescription(offer);
+            });
+          });
+        }
+        /**
+         * @method
+         * @returns {void}
+         */
+        init() {
+          if (this.#isInitialising) {
+            return;
+          }
+          this.#isInitialising = true;
+          this.#connection = new RTCPeerConnection({
+            iceServers: this.constructor.#iceServersForNATTypeTest
+          });
+          this.#connection.createDataChannel('bananas');
+          this.#iceGatheringComplete = new Promise((resolve) => {
+            this.#natTypeResolve = resolve;
+          });
+          this.#createConnection();
+        }
+        /**
+         * @private
+         * @method
+         * @returns {void}
+         */
         #createConnection() {
           const relatedPorts = new Map();
           this.#connection.onicecandidate = (event) => {
-            const { candidate, target: connection } = event;
-            if (candidate && candidate.type === 'srflx') {
+            const { target: connection } = event;
+            // ----------------------------------------------------------------------
+            // Chrome includes all the candidate properties in the candidate object
+            // but Firefox does not (so we need to parse the candidate string).
+            // ----------------------------------------------------------------------
+            if (event.candidate?.candidate.includes('srflx')) {
+              const candidate = this.#parseCandidate(event.candidate.candidate);
               const { relatedPort } = candidate;
               if (!relatedPorts.has(relatedPort)) {
                 relatedPorts.set(relatedPort, []);
@@ -113,42 +105,28 @@
             this.#connection.setLocalDescription(offer);
           });
         }
-        async getNATType() {
-          await this.#iceGatheringComplete;
-          return this.#natType;
-        }
-        async getICEGatheringTime(iceServers) {
-          return new Promise((resolve) => {
-            const connection = new RTCPeerConnection({ iceServers: iceServers });
-            connection.createDataChannel('bananas');
-            connection.onicecandidate = (event) => {
-              const { target: connection } = event;
-              if (connection.iceGatheringState === 'complete') {
-                performance.mark('end');
-                const { duration } = performance.measure('iceGatheringTime', 'start', 'end');
-                const iceGatheringTime = parseFloat(new Number(duration / 1000).toFixed(2));
-                resolve(iceGatheringTime);
-              }
-            }
-            performance.mark('start');
-            connection.createOffer().then((offer) =>  {
-              connection.setLocalDescription(offer);
-            });
-          });
-        }
-        init() {
-          if (this.#isInitialising) {
-            return;
-          }
-          this.#isInitialising = true;
-          this.#connection = new RTCPeerConnection({
-            iceServers: this.constructor.#iceServersForNATTypeTest
-          });
-          this.#connection.createDataChannel('bananas');
-          this.#iceGatheringComplete = new Promise((resolve) => {
-            this.#natTypeResolve = resolve;
-          });
-          this.#createConnection();
+        /**
+         * @private
+         * @method
+         * @param {string} candidateString
+         * @returns {RTCIceCandidate}
+         */
+        #parseCandidate(candidateString) {
+          const parts = candidateString.split(' ');
+          const address = parts[4];
+          const port = parts[5];
+          const type = candidateString.match(/typ ([^ ]+)/)[1];
+          const relatedAddress = candidateString.match(/raddr ([^ ]+)/)[1];
+          const relatedPort = candidateString.match(/rport ([^ ]+)/)[1];
+
+          return {
+            address: address,
+            candidate: candidateString,
+            port: parseInt(port, 10),
+            type: type,
+            relatedAddress: relatedAddress,
+            relatedPort: parseInt(relatedPort, 10)
+          };
         }
       }
 
