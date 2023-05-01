@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <main id="nat-info">
+      You are behind a <span id="nat-type">???</span> NAT.
+    </main>
+    <script type="module">
+      const relatedPorts = new Map();
+      const connection = new RTCPeerConnection();
+      connection.createDataChannel('bananas');
+      connection.onicecandidate = (event) => {
+        const { candidate } = event;
+        if (candidate && candidate.type === 'srflx') {
+          const { relatedPort } = candidate;
+          if (!relatedPorts.has(relatedPort)) {
+            relatedPorts.set(relatedPort, []);
+          }
+          relatedPorts.get(relatedPort).push(candidate);
+        } else if (!candidate) {
+          const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([relatedPort, candidates]) => {
+            return candidates.length === 1;
+          });
+          document.getElementById('nat-type').textContent = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
+        }
+      }
+      connection.createOffer().then(offer => connection.setLocalDescription(offer))
+    </script>
+  </body>
+</html>
