@@ -154,11 +154,11 @@
           });
         }
         async getNATType() {
-          await this.#iceGatheringComplete();
+          await this.#iceGatheringComplete;
           return this.#natType;
         }
         async getICEGatheringTime() {
-          await this.#iceGatheringComplete();
+          await this.#iceGatheringComplete;
           return this.#iceGatheringTime;
         }
       }
