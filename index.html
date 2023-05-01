@@ -4,57 +4,43 @@
     <main id="nat-info">
       You are behind a <span id="nat-type">???</span> NAT.
     </main>
-    <script>
-      const relatedPorts = new Map();
-      const connection = new RTCPeerConnection({
-        iceServers: [
-          // { urls: 'stun:stun1.l.google.com:19302' },
-          // { urls: 'stun:stun2.l.google.com:19302' },
-          {
-            "urls": "stun:a.relay.metered.ca:80"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:80",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:80?transport=tcp",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:443",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:443?transport=tcp",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          }
-        ]
-      });
-
-      connection.createDataChannel('bananas');
-      console.log('adding icecandidate event listener');
-      connection.onicecandidate = (event) => {
-        console.log(event);
-        const { candidate } = event;
-        if (candidate && candidate.type === 'srflx') {
-          const { relatedPort } = candidate;
-          if (!relatedPorts.has(relatedPort)) {
-            relatedPorts.set(relatedPort, []);
-          }
-          relatedPorts.get(relatedPort).push(candidate);
-        } else if (!candidate) {
-          const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([relatedPort, candidates]) => {
-            return candidates.length === 1;
+    <script type="module">
+      const getNATType = () => {
+        return new Promise((resolve) => {
+          const relatedPorts = new Map();
+          const connection = new RTCPeerConnection({
+            iceServers: [
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' }
+            ]
           });
-          document.getElementById('nat-type').textContent = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
-        }
-      }
-      connection.createOffer().then(offer => connection.setLocalDescription(offer))
+          connection.createDataChannel('bananas');
+          connection.onicecandidate = (event) => {
+            const { candidate, target: connection } = event;
+            if (candidate && candidate.type === 'srflx') {
+              const { relatedPort } = candidate;
+              if (!relatedPorts.has(relatedPort)) {
+                relatedPorts.set(relatedPort, []);
+              }
+              relatedPorts.get(relatedPort).push(candidate);
+            }
+
+            if (connection.iceGatheringState === 'complete') {
+              const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([relatedPort, candidates]) => {
+                return candidates.length === 1;
+              });
+
+              resolve(isSymmetricNAT ? 'symmetric' : 'non-symmetric');
+            }
+          }
+          connection.createOffer().then((offer) =>  {
+            connection.setLocalDescription(offer);
+          });
+        });
+      };
+
+      const natType = await getNATType();
+      document.getElementById('nat-type').textContent = natType;
     </script>
   </body>
 </html>
