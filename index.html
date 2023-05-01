@@ -4,11 +4,17 @@
     <main id="nat-info">
       You are behind a <span id="nat-type">???</span> NAT.
     </main>
-    <script type="module">
+    <script>
       const relatedPorts = new Map();
-      const connection = new RTCPeerConnection();
+      const connection = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
       connection.createDataChannel('bananas');
+      console.log('adding icecandidate event listener');
       connection.onicecandidate = (event) => {
+        console.log(event);
         const { candidate } = event;
         if (candidate && candidate.type === 'srflx') {
           const { relatedPort } = candidate;
