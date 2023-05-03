@@ -93,10 +93,11 @@
               relatedPorts.get(relatedPort).push(candidate);
             }
             if (connection.iceGatheringState === 'complete') {
-              const isSymmetricNAT = Array.from(relatedPorts.entries()).some(([_relatedPort, candidates]) => {
+              console.log('candidates', candidates);
+              const isNonSymmetricNAT = Array.from(relatedPorts.entries()).some(([_relatedPort, candidates]) => {
                 return candidates.length === 1;
               });
-              this.#natType = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
+              this.#natType = isNonSymmetricNAT ? 'non-symmetric' : 'symmetric';
               this.#natTypeResolve();
               this.#isInitialising = false;
             }
