@@ -145,12 +145,6 @@
       networkUtils.getNATType().then((natType) => {
         document.getElementById('nat-type').textContent = natType === 'symmetric' ? 'Symmetric' : 'Full-cone, Address-restricted or Port-restricted';
       });
-      networkUtils.getICEGatheringTime([
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' }
-      ]).then((iceGatheringTime) => {
-        document.getElementById('ice-gathering-time').textContent = iceGatheringTime;
-      });
     </script>
   </body>
 </html>
