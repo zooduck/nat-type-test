@@ -7,34 +7,9 @@
     <script type="module">
       class NetworkUtils {
         static #iceServersForNATTypeTest = [
-          // { urls: 'stun:stun1.l.google.com:19302' },
-          // { urls: 'stun:stun2.l.google.com:19302' },
-          // { urls: 'stun:a.relay.metered.ca:80' }
-          {
-              "urls": "stun:a.relay.metered.ca:80"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:80",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:80?transport=tcp",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:443",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          },
-          {
-              "urls": "turn:a.relay.metered.ca:443?transport=tcp",
-              "username": "3f3628c35bb173d21575d923",
-              "credential": "88W2kqWkYTs8Tv4L"
-          }
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
         ];
-
         #connection;
         #iceGatheringComplete;
         #natTypeResolve;
@@ -102,28 +77,51 @@
          * @returns {void}
          */
         #createConnection() {
-          const relatedPorts = new Map();
+          // const relatedPorts = new Map();
+          // const serverReflexiveCandidates = new Map();
+          const udpHostCandidates = [];
+          const tcpHostCandidates = [];
           this.#connection.onicecandidate = (event) => {
             const { target: connection } = event;
-            console.log('candidate', event.candidate);
             // ----------------------------------------------------------------------
             // Chrome includes all the candidate properties in the candidate object
             // but Firefox does not (so we need to parse the candidate string).
             // ----------------------------------------------------------------------
-            if (event.candidate?.candidate.includes('srflx')) {
-              const candidate = this.#parseCandidate(event.candidate.candidate);
-              const { relatedPort } = candidate;
-              if (!relatedPorts.has(relatedPort)) {
-                relatedPorts.set(relatedPort, []);
-              }
-              relatedPorts.get(relatedPort).push(candidate);
+            const parsedCandidate = this.#parseCandidate(event.candidate);
+            if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'udp') {
+              udpHostCandidates.push(parsedCandidate);
+            } else if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'tcp') {
+              tcpHostCandidates.push(parsedCandidate);
             }
+            // if (event.candidate?.candidate.includes('srflx')) {
+            //   const candidate = this.#parseCandidate(event.candidate.candidate);
+            //   const { relatedPort } = candidate;
+            //   if (!relatedPorts.has(relatedPort)) {
+            //     relatedPorts.set(relatedPort, []);
+            //   }
+            //   relatedPorts.get(relatedPort).push(candidate);
+            // }
             if (connection.iceGatheringState === 'complete') {
-              console.log('relatedPorts', relatedPorts);
-              const isNonSymmetricNAT = Array.from(relatedPorts.entries()).some(([_relatedPort, candidates]) => {
-                return candidates.length === 1;
-              });
-              this.#natType = isNonSymmetricNAT ? 'non-symmetric' : 'symmetric';
+              const isSymmetricNAT = udpHostCandidates.length > 1 || tcpHostCandidates.length > 1;
+              console.log('udpHostCandidates', udpHostCandidates, 'tcpHostCandidates', tcpHostCandidates);
+              // const isNonSymmetricNAT = Array.from(relatedPorts.entries()).some(([_relatedPort, candidates]) => {
+              //   return candidates.length === 1;
+              // });
+              // -------------------------------------------------
+              // Note: There are four NAT types defined in STUN:
+              // 1. Full-cone NAT
+              // 2. Address-restricted cone NAT
+              // 3. Port-restricted cone NAT
+              // 4. Symmetric NAT (requires TURN server)
+              // -------------------------------------------------------
+              // Symnmetric NAT requires a TURN server because it
+              // maps requests from the same source (host) IP address
+              // and port to different public IP addresses and ports
+              // for each destination (and since the STUN server is not
+              // the final destination - the remote peer's public IP is)
+              // a TURN server with is required to relay the connection.
+              // -------------------------------------------------------
+              this.#natType = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
               this.#natTypeResolve();
               this.#isInitialising = false;
             }
@@ -135,13 +133,18 @@
         /**
          * @private
          * @method
-         * @param {string} candidateString
+         * @param {RTCIceCandidate} candidate
          * @returns {RTCIceCandidate}
          */
-        #parseCandidate(candidateString) {
+        #parseCandidate(candidate) {
+          if (!candidate || !candidate.candidate) {
+            return candidate;
+          }
+
           const parts = candidateString.split(' ');
           const address = parts[4];
           const port = parts[5];
+          const protocol = parts[2];
           const type = candidateString.match(/typ ([^ ]+)/)[1];
           const relatedAddress = candidateString.match(/raddr ([^ ]+)/)[1];
           const relatedPort = candidateString.match(/rport ([^ ]+)/)[1];
@@ -150,6 +153,7 @@
             address: address,
             candidate: candidateString,
             port: parseInt(port, 10),
+            protocol: protocol.toLowerCase(),
             type: type,
             relatedAddress: relatedAddress,
             relatedPort: parseInt(relatedPort, 10)
