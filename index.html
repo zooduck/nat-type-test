@@ -147,8 +147,8 @@
           const port = parts[5];
           const protocol = parts[2];
           const type = candidateString.match(/typ ([^ ]+)/)[1];
-          const relatedAddress = candidateString.match(/raddr ([^ ]+)/)[1];
-          const relatedPort = candidateString.match(/rport ([^ ]+)/)[1];
+          // const relatedAddress = candidateString.match(/raddr ([^ ]+)/)[1];
+          // const relatedPort = candidateString.match(/rport ([^ ]+)/)[1];
 
           return {
             address: address,
@@ -156,8 +156,8 @@
             port: parseInt(port, 10),
             protocol: protocol.toLowerCase(),
             type: type,
-            relatedAddress: relatedAddress,
-            relatedPort: parseInt(relatedPort, 10)
+            // relatedAddress: relatedAddress,
+            // relatedPort: parseInt(relatedPort, 10)
           };
         }
       }
