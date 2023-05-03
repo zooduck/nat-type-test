@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
-  <body>
+  <body style="display: flex; height: 100vh; margin: 0 auto; align-items: center; justify-content: center;">
     <main id="nat-info">
-      You are behind a <span id="nat-type">???</span> NAT. ICE gathering time is: <span id="ice-gathering-time">???</span>s.
+      You are behind a <strong id="nat-type">...</strong> NAT.
     </main>
     <script type="module">
       class NetworkUtils {
@@ -101,7 +101,7 @@
               // the final destination - the remote peer's public IP is)
               // a TURN server is required to relay the traffic.
               // -------------------------------------------------------
-              this.#natType = isSymmetricNAT ? 'symmetric' : 'full-cone|address-restricted|port-restricted';
+              this.#natType = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
               this.#natTypeResolve();
               this.#isInitialising = false;
             }
@@ -143,7 +143,7 @@
       window.networkUtils = networkUtils;
 
       networkUtils.getNATType().then((natType) => {
-        document.getElementById('nat-type').textContent = natType;
+        document.getElementById('nat-type').textContent = natType === 'symmetric' ? 'Symmetric' : 'Full-cone, Address-restricted or Port-restricted';
       });
       networkUtils.getICEGatheringTime([
           { urls: 'stun:stun1.l.google.com:19302' },
