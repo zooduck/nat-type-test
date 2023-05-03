@@ -87,22 +87,21 @@
             }
             if (connection.iceGatheringState === 'complete') {
               const isSymmetricNAT = udpHostCandidates.length > 1 || tcpHostCandidates.length > 1;
-              console.log('udpHostCandidates', udpHostCandidates, 'tcpHostCandidates', tcpHostCandidates);
               // -------------------------------------------------
               // Note: There are four NAT types defined in STUN:
               // 1. Full-cone NAT
-              // 2. Address-restricted cone NAT
-              // 3. Port-restricted cone NAT
+              // 2. Address-restricted NAT
+              // 3. Port-restricted NAT
               // 4. Symmetric NAT (requires TURN server)
               // -------------------------------------------------------
-              // Symnmetric NAT requires a TURN server because it
+              // Note: Symnmetric NAT requires a TURN server because it
               // maps requests from the same source (host) IP address
               // and port to different public IP addresses and ports
               // for each destination (and since the STUN server is not
               // the final destination - the remote peer's public IP is)
-              // a TURN server with is required to relay the connection.
+              // a TURN server is required to relay the traffic.
               // -------------------------------------------------------
-              this.#natType = isSymmetricNAT ? 'symmetric' : 'non-symmetric';
+              this.#natType = isSymmetricNAT ? 'symmetric' : 'full-cone|address-restricted|port-restricted';
               this.#natTypeResolve();
               this.#isInitialising = false;
             }
