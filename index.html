@@ -8,7 +8,7 @@
       class NetworkUtils {
         static #iceServersForNATTypeTest = [
           { urls: 'stun:stun1.l.google.com:19302' },
-          // { urls: 'stun:stun2.l.google.com:19302' }
+          { urls: 'stun:stun2.l.google.com:19302' }
         ];
         #connection;
         #iceGatheringComplete;
@@ -80,6 +80,7 @@
           const relatedPorts = new Map();
           this.#connection.onicecandidate = (event) => {
             const { target: connection } = event;
+            console.log('candidate', event.candidate);
             // ----------------------------------------------------------------------
             // Chrome includes all the candidate properties in the candidate object
             // but Firefox does not (so we need to parse the candidate string).
