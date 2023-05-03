@@ -58,7 +58,12 @@
             return;
           }
           this.#isInitialising = true;
-          this.#connection = new RTCPeerConnection();
+          this.#connection = new RTCPeerConnection({
+            iceServers: [
+              {urls: "stun:stun1.l.google.com:19302"},
+              {urls: "stun:stun2.l.google.com:19302"}
+            ]
+          });
           this.#connection.createDataChannel('bananas');
           this.#iceGatheringComplete = new Promise((resolve) => {
             this.#natTypeResolve = resolve;
@@ -80,15 +85,12 @@
             // but Firefox does not (so we need to parse the candidate string).
             // ----------------------------------------------------------------------
             const parsedCandidate = this.#parseCandidate(event.candidate);
-            console.log('candidate', event.candidate);
-            console.log('parsedCandidate', parsedCandidate);
             if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'udp') {
               udpHostCandidates.push(parsedCandidate);
             } else if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'tcp') {
               tcpHostCandidates.push(parsedCandidate);
             }
             if (connection.iceGatheringState === 'complete') {
-              console.log(udpHostCandidates, tcpHostCandidates);
               const isSymmetricNAT = udpHostCandidates.length > 1 || tcpHostCandidates.length > 1;
               // -------------------------------------------------
               // Note: There are four NAT types defined in STUN:
