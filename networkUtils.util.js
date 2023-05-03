@@ -156,3 +156,5 @@ class NetworkUtils {
 }
 
 const networkUtils = new NetworkUtils();
+
+export { networkUtils };
