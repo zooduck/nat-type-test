@@ -98,7 +98,6 @@ class NetworkUtils {
       // but Firefox does not (so we need to parse the candidate string).
       // ----------------------------------------------------------------------
       const parsedCandidate = this.#parseCandidate(event.candidate);
-      console.log('event.candidate', event.candidate);
       if (parsedCandidate?.type === 'srflx') {
         serverReflexiveCandidates.set(parsedCandidate.port, parsedCandidate);
       }
