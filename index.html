@@ -76,10 +76,12 @@
          * @returns {void}
          */
         #createConnection() {
-          const udpHostCandidates = [];
-          const tcpHostCandidates = [];
-          const udpServerReflexiveCandidates = [];
-          const tcpServerReflexiveCandidates = [];
+          // const udpHostCandidates = [];
+          // const tcpHostCandidates = [];
+
+
+          const serverReflexiveCandidates = new Map();
+
           this.#connection.onicecandidate = (event) => {
             const { target: connection } = event;
             // ----------------------------------------------------------------------
@@ -87,35 +89,25 @@
             // but Firefox does not (so we need to parse the candidate string).
             // ----------------------------------------------------------------------
             const parsedCandidate = this.#parseCandidate(event.candidate);
-            if (parsedCandidate?.protocol === 'udp') {
-              switch (parsedCandidate.type) {
-                case 'host':
-                  udpHostCandidates.push(parsedCandidate);
-                  break;
-                case 'srflx':
-                  udpServerReflexiveCandidates.push(parsedCandidate);
-                  break;
-                default:
-                  break;
-              }
-            } else if (parsedCandidate?.protocol === 'tcp') {
-              switch (parsedCandidate.type) {
-                case 'host':
-                  tcpHostCandidates.push(parsedCandidate);
-                  break;
-                case 'srflx':
-                  tcpServerReflexiveCandidates.push(parsedCandidate);
-                  break;
-                default:
-                  break;
-              }
+
+            if (parsedCandidate?.type === 'srflx') {
+              serverReflexiveCandidates.set(parsedCandidate.port, parsedCandidate);
             }
+
+
+
+
+            // if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'udp') {
+            //   udpHostCandidates.push(parsedCandidate);
+            // } else if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'tcp') {
+            //   tcpHostCandidates.push(parsedCandidate);
+            // }
+
+
             if (connection.iceGatheringState === 'complete') {
-              console.log('udpHostCandidates', udpHostCandidates);
-              console.log('tcpHostCandidates', tcpHostCandidates);
-              console.log('udpServerReflexiveCandidates', udpServerReflexiveCandidates);
-              console.log('tcpServerReflexiveCandidates', tcpServerReflexiveCandidates);
-              const isSymmetricNAT = udpHostCandidates.length > 1 || tcpHostCandidates.length > 1;
+              console.log('serverReflexiveCandidates', serverReflexiveCandidates);
+              const isSymmetricNAT = serverReflexiveCandidates.size > 1;
+              // const isSymmetricNAT = udpHostCandidates.length > 1 || tcpHostCandidates.length > 1;
               // -------------------------------------------------
               // Note: There are four NAT types defined in STUN:
               // 1. Full-cone NAT
