@@ -80,7 +80,7 @@
             // but Firefox does not (so we need to parse the candidate string).
             // ----------------------------------------------------------------------
             const parsedCandidate = this.#parseCandidate(event.candidate);
-            console.log('candidate', candidate);
+            console.log('candidate', event.candidate);
             console.log('parsedCandidate', parsedCandidate);
             if (parsedCandidate?.type === 'host' && parsedCandidate.protocol === 'udp') {
               udpHostCandidates.push(parsedCandidate);
