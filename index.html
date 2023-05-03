@@ -86,6 +86,7 @@
               tcpHostCandidates.push(parsedCandidate);
             }
             if (connection.iceGatheringState === 'complete') {
+              console.log(udpHostCandidates, tcpHostCandidates);
               const isSymmetricNAT = udpHostCandidates.length > 1 || tcpHostCandidates.length > 1;
               // -------------------------------------------------
               // Note: There are four NAT types defined in STUN:
