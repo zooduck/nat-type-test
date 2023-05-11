@@ -10,11 +10,9 @@ class NetworkUtils {
   #isInitialising;
   #natType;
   constructor() {
-    this.#iceGatheringComplete = () => {
-      return new Promise((resolve) => {
-        this.#natTypeResolve = resolve;
-      });
-    }
+    this.#iceGatheringComplete = new Promise((resolve) => {
+      this.#natTypeResolve = resolve;
+    });
     this.init();
   }
   /**
@@ -22,7 +20,7 @@ class NetworkUtils {
    * @returns {Promise<'non-symmetric'|'symmetric'>}
    */
   async getNATType() {
-    await this.#iceGatheringComplete();
+    await this.#iceGatheringComplete;
     return this.#natType;
   }
   /**
@@ -36,7 +34,7 @@ class NetworkUtils {
     }
     return new Promise((resolve) => {
       const connection = new RTCPeerConnection({ iceServers: iceServers });
-      connection.createDataChannel('icegatheringtimetest');
+      connection.createDataChannel('ice_gathering_time_test');
       connection.onicecandidate = (event) => {
         const { target: connection } = event;
         if (connection.iceGatheringState === 'complete') {
@@ -90,7 +88,7 @@ class NetworkUtils {
         {urls: "stun:stun2.l.google.com:19302"}
       ]
     });
-    connection.createDataChannel('nattypetest');
+    connection.createDataChannel('nat_type_test');
     const serverReflexiveCandidates = new Map();
     connection.onicecandidate = (event) => {
       const { target: connection } = event;
