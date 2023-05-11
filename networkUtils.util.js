@@ -5,12 +5,16 @@
  * @see {@link https://info.support.huawei.com/info-finder/encyclopedia/en/NAT.html NAT types defined in STUN}
  */
 class NetworkUtils {
-  #connection;
   #iceGatheringComplete;
   #natTypeResolve;
   #isInitialising;
   #natType;
   constructor() {
+    this.#iceGatheringComplete = () => {
+      return new Promise((resolve) => {
+        this.#natTypeResolve = resolve;
+      });
+    }
     this.init();
   }
   /**
@@ -18,7 +22,7 @@ class NetworkUtils {
    * @returns {Promise<'non-symmetric'|'symmetric'>}
    */
   async getNATType() {
-    await this.#iceGatheringComplete;
+    await this.#iceGatheringComplete();
     return this.#natType;
   }
   /**
@@ -32,7 +36,7 @@ class NetworkUtils {
     }
     return new Promise((resolve) => {
       const connection = new RTCPeerConnection({ iceServers: iceServers });
-      connection.createDataChannel('bananas');
+      connection.createDataChannel('icegatheringtimetest');
       connection.onicecandidate = (event) => {
         const { target: connection } = event;
         if (connection.iceGatheringState === 'complete') {
@@ -57,7 +61,15 @@ class NetworkUtils {
       return;
     }
     this.#isInitialising = true;
-    this.#connection = new RTCPeerConnection({
+    this.#createConnectionForNATTypeTest();
+  }
+  /**
+   * @private
+   * @method
+   * @returns {void}
+   */
+  #createConnectionForNATTypeTest() {
+    const connection = new RTCPeerConnection({
       // ---------------------------------------------------------------------------------------
       // Google STUN servers required for serverReflexiveCandidates Map to work!!!
       // (for example, Metered STUN server does not return any Server Reflexive Candidates
@@ -78,20 +90,9 @@ class NetworkUtils {
         {urls: "stun:stun2.l.google.com:19302"}
       ]
     });
-    this.#connection.createDataChannel('bananas');
-    this.#iceGatheringComplete = new Promise((resolve) => {
-      this.#natTypeResolve = resolve;
-    });
-    this.#createConnection();
-  }
-  /**
-   * @private
-   * @method
-   * @returns {void}
-   */
-  #createConnection() {
+    connection.createDataChannel('nattypetest');
     const serverReflexiveCandidates = new Map();
-    this.#connection.onicecandidate = (event) => {
+    connection.onicecandidate = (event) => {
       const { target: connection } = event;
       // ----------------------------------------------------------------------
       // Chrome includes all the candidate properties in the candidate object
@@ -104,13 +105,13 @@ class NetworkUtils {
       if (connection.iceGatheringState === 'complete') {
         const isSymmetricNAT = serverReflexiveCandidates.size > 1;
         // --------------------------------------------------------
-        // Note: There are four NAT types defined in STUN:
+        // There are four NAT types defined in STUN:
         // 1. Full-cone NAT
         // 2. Address-restricted NAT
         // 3. Port-restricted NAT
         // 4. Symmetric NAT (requires TURN server)
         // --------------------------------------------------------
-        // Note: Symnmetric NAT requires a TURN server because it
+        // Symnmetric NAT requires a TURN server because it
         // maps requests from the same source (host) IP address
         // and port to different public IP addresses and ports
         // for each destination (and since the STUN server is not
@@ -122,8 +123,8 @@ class NetworkUtils {
         this.#isInitialising = false;
       }
     }
-    this.#connection.createOffer().then((offer) =>  {
-      this.#connection.setLocalDescription(offer);
+    connection.createOffer().then((offer) =>  {
+      connection.setLocalDescription(offer);
     });
   }
   /**
